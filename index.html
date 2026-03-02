@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Language AI Project</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; text-align: center; background-color: #f4f4f9; padding: 20px; }
+        #webcam-container { margin: 20px auto; border: 10px solid white; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); display: inline-block; overflow: hidden; }
+        #label-container { font-size: 32px; font-weight: bold; color: #333; margin-top: 20px; background: white; display: inline-block; padding: 10px 30px; border-radius: 50px; }
+        button { background-color: #4CAF50; color: white; padding: 15px 32px; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: #45a049; }
+    </style>
+</head>
+<body>
+    <h1>AI แปลภาษามือ (นิ่ง / รัก / ขอโทษ)</h1>
+    <button type="button" onclick="init()">เปิดกล้องเริ่มแปล</button>
+    <br>
+    <div id="webcam-container"></div>
+    <br>
+    <div id="label-container">รอการเชื่อมต่อ...</div>
+
+    <script type="text/javascript">
+        // *** สำคัญ: เอาลิงก์ที่คุณก๊อปปี้มาจาก TM มาวางแทนที่ด้านล่างนี้ ***
+        const URL = "https://teachablemachine.withgoogle.com/models/1Dx5KEiKz/"; 
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            // โหลดโมเดล
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            // ตั้งค่ากล้อง
+            const flip = true; 
+            webcam = new tmImage.Webcam(300, 300, flip); 
+            await webcam.setup(); 
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+        }
+
+        async function loop() {
+            webcam.update(); 
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            // หาคำตอบที่เปอร์เซ็นต์สูงที่สุด
+            let highestProb = 0;
+            let bestMatch = "";
+
+            for (let i = 0; i < maxPredictions; i++) {
+                if(prediction[i].probability > highestProb) {
+                    highestProb = prediction[i].probability;
+                    bestMatch = prediction[i].className;
+                }
+            }
+
+            // แสดงผลถ้ามั่นใจมากกว่า 85%
+            if (highestProb > 0.85) {
+                labelContainer.innerHTML = "คุณกำลังทำท่า: " + bestMatch;
+            } else {
+                labelContainer.innerHTML = "กำลังอ่านท่าทาง...";
+            }
+        }
+    </script>
+</body>
+</html>
